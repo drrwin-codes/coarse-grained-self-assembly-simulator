@@ -6,6 +6,13 @@
 
 `Molecular dynamics simulations` can capture this `self-assembly` in exquisite atomistic detail, but that detail comes at a cost: 
 
+---
+
+<img width="1050" height="750" alt="image" src="https://github.com/user-attachments/assets/b2c1ef27-cf5e-4b95-a8a4-865bf5b307e2" />
+
+
+---
+
 > **the computational overhead often buries the simple physical rules actually driving the transitions between these phases.**
 
 **I wanted to strip the problem down and ask a more basic question:**
@@ -24,6 +31,7 @@ To find out, I built a `minimal 2D lattice Monte Carlo simulator`. Amphiphiles a
 
 ---
 > Phase behavior isn't an emergent property that requires the full weight of atomistic simulation to predict; a packing parameter and a concentration are, in this minimal picture, doing most of the explanatory work; the chemical identity of the tail, the exact solvent composition, the fine details MD captures so well, seems to matter less for determining which phase you land in, and more for the finer details of *how* you get there.
- ---
+---
+
 There's something clarifying about watching a system this stripped-down still find its way to spheres, cylinders, and bilayers. Hope you find it cool too :)
 
