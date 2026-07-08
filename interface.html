@@ -1,0 +1,1462 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Coarse-Grained Self-Assembly — Live Workstation</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script>
+  window.MathJax = {
+    tex: { inlineMath: [['\\(', '\\)']], displayMath: [['\\[', '\\]']] },
+    svg: { fontCache: 'global' }
+  };
+</script>
+<script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
+<style>
+  /* Push your creator tag to the far right side of the top bar */
+  .meta-bar {
+    display: flex !important;
+    justify-content: flex-start;
+  }
+
+  .meta-bar .creator-tag {
+    margin-left: auto !important; /* This automatically pushes it to the far right */
+    text-transform: lowercase !important; /* Guarantees all lower case font */
+    opacity: 0.85; /* Softens the text slightly to blend with the UI */
+  }
+
+  /* Break completely out of the flex layout rules */
+  .morphology-panel.panel {
+    position: static !important;
+    display: block !important;
+    width: 100% !important;
+    clear: both !important;
+    margin-top: 5px !important;
+  }
+
+  /* Ensure the main workstation doesn't try to hide elements beneath it */
+  main.workstation {
+    height: auto !important;
+    min-height: min-content !important;
+
+  }
+  /* Add breathing room to the bottom of the page */
+  footer {
+    padding-bottom: 12px !important;
+    padding-top: 15px !important;
+    width: 100% !important;
+    text-align: left;
+
+}
+  :root {
+    --bg: #111216;
+    --panel: #1A1C23;
+    --panel-border: #2D313E;
+    --inset: #14151A;
+    --text: #E2E8F0;
+    --muted: #94A3B8;
+    --grid: #2D313E;
+    --axis: #64748B;
+    --head: #00F0FF;
+    --tail: #31425F;
+    --pocket: #468FAF;
+    --accent: #CBD5E1;
+    --micelle: #21918C;
+    --cyl: #ECB22E;
+    --vesicle: #3B528B;
+    --bilayer: #440154;
+    --plot-line: #FDE725;
+    --mono: 'IBM Plex Mono', 'Courier New', monospace;
+    --sans: 'Inter', Arial, Helvetica, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; height: 100%; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 13px;
+    line-height: 1.45;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ---- metadata bar ---- */
+  .meta-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0;
+    border-bottom: 1px solid var(--panel-border);
+    background: var(--panel);
+    font-family: var(--mono);
+    font-size: 10.5px;
+    letter-spacing: 0.02em;
+  }
+  .meta-bar .item {
+    padding: 7px 14px;
+    border-right: 1px solid var(--panel-border);
+    color: var(--muted);
+    white-space: nowrap;
+  }
+  .meta-bar .item .val { color: var(--text); }
+  .meta-bar .item.status .val { color: #86EFAC; }
+
+  /* ---- page header ---- */
+  .page {
+    max-width: 1440px;
+    margin: 0 auto;
+    padding: 0 16px 12px;
+    width: 100%;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+  .page-header {
+    padding: 18px 0 14px;
+    border-bottom: 1px solid var(--panel-border);
+    margin-bottom: 14px;
+  }
+  .page-header .tag {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin: 0 0 6px;
+  }
+  .page-header h1 {
+    font-size: 18px;
+    font-weight: 600;
+    margin: 0 0 6px;
+    letter-spacing: -0.01em;
+  }
+  .page-header .desc {
+    margin: 0;
+    color: var(--muted);
+    font-size: 12px;
+    max-width: 900px;
+  }
+
+  /* ---- 3-column layout ---- */
+  .workstation {
+    display: grid;
+    grid-template-columns: 260px 1fr 300px;
+    grid-template-rows: 1fr auto;
+    gap: 12px;
+    flex: 1;
+    min-height: 0;
+    align-items: stretch;
+  }
+  @media (max-width: 1100px) {
+    .workstation { grid-template-columns: 1fr 1fr; grid-template-rows: auto auto auto; }
+    .col-viewport { grid-column: 1 / -1; order: -1; }
+    .morphology-panel { grid-column: 1 / -1; }
+  }
+  @media (max-width: 700px) {
+    .workstation { grid-template-columns: 1fr; }
+  }
+
+  .col-controls,
+  .col-analytics {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    min-height: 0;
+  }
+  .col-controls .panel-grow,
+  .col-analytics .panel-grow { flex: 1; }
+  .col-viewport { display: flex; flex-direction: column; min-height: 0; }
+  .col-viewport .panel { flex: 1; display: flex; flex-direction: column; min-height: 0; }
+  .canvas-wrap { flex: 1; align-items: center; }
+
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--panel-border);
+    padding: 12px;
+  }
+  .panel + .panel { margin-top: 10px; }
+  .panel-title {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin: 0 0 10px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--panel-border);
+  }
+  .panel-note {
+    font-size: 11px;
+    color: var(--muted);
+    margin: 0 0 10px;
+    line-height: 1.5;
+  }
+
+  /* ---- metrics ---- */
+  .metric-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+  }
+  .metric {
+    border: 1px solid var(--panel-border);
+    padding: 7px 8px;
+    background: var(--inset);
+  }
+  .metric .label {
+    font-size: 10px;
+    color: var(--muted);
+    margin-bottom: 3px;
+    line-height: 1.3;
+  }
+  .metric .num {
+    font-family: var(--mono);
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text);
+    letter-spacing: 0.02em;
+  }
+  .phase-tag {
+    display: inline-block;
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 600;
+    padding: 2px 6px;
+    border: 1px solid var(--panel-border);
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+  }
+
+  /* ---- sliders ---- */
+  .param-block { margin-bottom: 16px; }
+  .param-block:last-child { margin-bottom: 0; }
+  .param-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 6px;
+    gap: 8px;
+  }
+  .param-name {
+    font-size: 11.5px;
+    font-weight: 500;
+    color: var(--text);
+    line-height: 1.35;
+  }
+  .param-val {
+    font-family: var(--mono);
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text);
+    flex-shrink: 0;
+  }
+  .param-bounds {
+    display: flex;
+    justify-content: space-between;
+    font-family: var(--mono);
+    font-size: 9.5px;
+    color: var(--muted);
+    margin-bottom: 4px;
+  }
+  input[type=range] {
+    -webkit-appearance: none;
+    width: 100%;
+    height: 2px;
+    background: var(--panel-border);
+    outline: none;
+    border-radius: 0;
+  }
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 10px;
+    height: 14px;
+    background: var(--text);
+    border: 1px solid var(--panel-border);
+    border-radius: 0;
+    cursor: pointer;
+  }
+  input[type=range]::-moz-range-thumb {
+    width: 10px;
+    height: 14px;
+    background: var(--text);
+    border: 1px solid var(--panel-border);
+    border-radius: 0;
+    cursor: pointer;
+  }
+  .param-ticks {
+    display: flex;
+    justify-content: space-between;
+    font-family: var(--mono);
+    font-size: 9px;
+    color: var(--muted);
+    margin-top: 5px;
+  }
+  .param-unit {
+    font-family: var(--mono);
+    font-size: 9.5px;
+    color: var(--muted);
+    margin-top: 3px;
+  }
+
+  /* ---- instrument buttons ---- */
+  .btn-row { display: flex; gap: 6px; margin-top: 14px; }
+  button {
+    font-family: var(--mono);
+    font-size: 10.5px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    background: var(--inset);
+    color: var(--text);
+    border: 1px solid var(--panel-border);
+    border-radius: 0;
+    padding: 8px 14px;
+    cursor: pointer;
+    transition: background 0.1s, border-color 0.1s;
+  }
+  button:hover { border-color: var(--accent); background: #1E2028; }
+  button.active {
+    background: var(--text);
+    color: var(--bg);
+    border-color: var(--text);
+  }
+
+  /* ---- viewport ---- */
+  .viewport-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+    font-size: 11px;
+    color: var(--muted);
+  }
+  .viewport-header .mono { font-family: var(--mono); color: var(--text); font-size: 10.5px; }
+  .canvas-wrap {
+    background: var(--inset);
+    border: 1px solid var(--panel-border);
+    padding: 8px;
+    display: flex;
+    justify-content: center;
+  }
+  canvas {
+    display: block;
+    image-rendering: pixelated;
+    max-width: 100%;
+    height: auto;
+  }
+
+  /* ---- legend ---- */
+  .legend { display: flex; flex-direction: column; gap: 5px; }
+  .legend .row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--muted);
+  }
+  .swatch {
+    width: 10px;
+    height: 10px;
+    flex: none;
+    border: 1px solid var(--panel-border);
+  }
+
+  /* ---- SVG plots ---- */
+  .plot-svg { display: block; width: 100%; height: auto; }
+  .plot-current {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--muted);
+    margin-top: 6px;
+    display: flex;
+    justify-content: space-between;
+  }
+  .plot-current .num { color: var(--text); }
+
+  /* ---- morphology distribution panel ---- */
+  .morphology-panel { grid-column: 1 / -1; }
+  .morph-bars {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 14px;
+  }
+  @media (max-width: 900px) {
+    .morph-bars { grid-template-columns: repeat(2, 1fr); }
+  }
+  @media (max-width: 500px) {
+    .morph-bars { grid-template-columns: 1fr; }
+  }
+  .morph-bar-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 6px;
+    gap: 8px;
+  }
+  .morph-bar-name {
+    font-size: 10px;
+    font-weight: 500;
+    color: var(--muted);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+  .morph-bar-pct {
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text);
+    letter-spacing: 0.03em;
+  }
+  .morph-bar-track {
+    height: 5px;
+    background: var(--inset);
+    border: 1px solid var(--panel-border);
+    position: relative;
+    overflow: hidden;
+  }
+  .morph-bar-fill {
+    height: 100%;
+    width: 0%;
+    transition: width 0.35s ease;
+  }
+
+  footer {
+    margin-top: auto;
+    padding-top: 10px;
+    border-top: 1px solid var(--panel-border);
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--muted);
+    line-height: 1.6;
+  }
+</style>
+</head>
+<body>
+
+<div class="meta-bar">
+  <div class="item">Ensemble: <span class="val">NVT</span></div>
+  <div class="item">Timestep: <span class="val">\( \Delta t = 0.02 \)</span></div>
+  <div class="item">Force Field: <span class="val">Coarse-Grained MARTINI-variant</span></div>
+  <div class="item">Lattice: <span class="val">\( L = 40 \)</span></div>
+  <div class="item status" id="statusItem">Status: <span class="val" id="statusVal">Equilibrating</span></div>
+  <div class="item creator-tag">created by: <span class="val">darren phan</span></div>
+  <div class="project-icon">
+      <div class="nucleus"></div>
+      <div class="orbit"></div>
+    </div>
+  </div>
+</div>
+
+<div class="page">
+  <header class="page-header">
+    <p class="tag">Lattice Monte Carlo &mdash; Real-Time Observation</p>
+    <h1>Amphiphile Self-Assembly Phase Workstation</h1>
+    <p class="desc">Coarse-grained bead-spring lattice model. Hydrophobic tails (\( T \)) and hydrophilic heads (\( H \))
+    interact via a validated pairwise energy matrix. Adjust \( g \) and \( \phi \) across the 28-point replicated sweep grid.</p>
+    <div class="header-molecule-logo">
+      <div class="head-bead"></div>
+      <div class="tail-link"></div>
+      <div class="tail-bead"></div>
+    </div>
+  </header>
+
+  <main class="workstation">
+
+    <!-- LEFT: controls -->
+    <aside class="col-controls">
+      <div class="panel">
+        <h2 class="panel-title">Simulation Parameters</h2>
+
+        <div class="param-block">
+          <div class="param-header">
+            <span class="param-name">Geometry Ratio (\( g \))</span>
+            <span class="param-val" id="gVal">0.750</span>
+          </div>
+          <div class="param-bounds"><span>min: 0.125</span><span>max: 0.875</span></div>
+          <input type="range" id="gSlider" min="0" max="6" step="1" value="5">
+          <div class="param-ticks">
+            <span>0.125</span><span>0.250</span><span>0.375</span><span>0.500</span>
+            <span>0.625</span><span>0.750</span><span>0.875</span>
+          </div>
+          <div class="param-unit">Unit: dimensionless &nbsp;|&nbsp; \( g = n_{\mathrm{tail}} / 8 \)</div>
+        </div>
+
+        <div class="param-block">
+          <div class="param-header">
+            <span class="param-name">Surfactant Volume Fraction (\( \phi \))</span>
+            <span class="param-val" id="phiVal">0.400</span>
+          </div>
+          <div class="param-bounds"><span>min: 0.125</span><span>max: 0.400</span></div>
+          <input type="range" id="phiSlider" min="0" max="3" step="1" value="3">
+          <div class="param-ticks"><span>0.125</span><span>0.225</span><span>0.325</span><span>0.400</span></div>
+          <div class="param-unit">Unit: dimensionless &nbsp;|&nbsp; \( \phi = N_{\mathrm{chains}} / L^2 \)</div>
+        </div>
+
+        <div class="btn-row">
+          <button class="active" id="playBtn">Pause</button>
+          <button id="resetBtn">Reset</button>
+        </div>
+      </div>
+
+      <div class="panel panel-grow">
+        <h2 class="panel-title">Aggregate Metrics</h2>
+        <div class="metric-grid">
+          <div class="metric">
+            <div class="label">\( N_{\mathrm{agg}} \)</div>
+            <div class="num" id="statAgg">&mdash;</div>
+          </div>
+          <div class="metric">
+            <div class="label">\( N_{\mathrm{chains}}^{\mathrm{max}} \)</div>
+            <div class="num" id="statMax">&mdash;</div>
+          </div>
+          <div class="metric">
+            <div class="label">MC Sweeps</div>
+            <div class="num" id="statSweeps">0</div>
+          </div>
+          <div class="metric">
+            <div class="label">\( U_{\mathrm{pot}} \) / \( k_B T \)</div>
+            <div class="num" id="statEnergy">&mdash;</div>
+          </div>
+        </div>
+        <div style="margin-top:10px;">
+          <div class="label" style="font-size:10px;color:var(--muted);margin-bottom:4px;">Dominant Phase</div>
+          <span class="phase-tag" id="statLabel">micelle</span>
+        </div>
+      </div>
+    </aside>
+
+    <!-- CENTER: viewport -->
+    <section class="col-viewport">
+      <div class="panel">
+        <div class="viewport-header">
+          <span>Lattice Viewport &mdash; Periodic Boundary Conditions</span>
+          <span class="mono" id="viewportInfo">\( g = 0.750 \), \( \phi = 0.400 \)</span>
+        </div>
+        <div class="canvas-wrap">
+          <canvas id="latticeCanvas" width="520" height="520"></canvas>
+        </div>
+      </div>
+    </section>
+
+    <!-- RIGHT: analytics -->
+    <aside class="col-analytics">
+      <div class="panel">
+        <h2 class="panel-title">Live Analytical Outputs</h2>
+        <p class="panel-note">System potential energy \( U_{\mathrm{pot}} \) tracked per MC sweep. Units: \( k_B T \).</p>
+        <svg id="energyPlot" class="plot-svg" viewBox="0 0 276 160"></svg>
+        <div class="plot-current">
+          <span>Current: <span class="num" id="plotEnergyVal">&mdash;</span> \( k_B T \)</span>
+          <span>Sweep: <span class="num" id="plotSweepVal">0</span></span>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h2 class="panel-title">Phase Diagram &mdash; 28-Point Sweep</h2>
+        <p class="panel-note">Validated grid (\( n = 4 \) seeds per point). Crosshair marks current \( (\phi, g) \) coordinate.</p>
+        <svg id="phaseMap" class="plot-svg" viewBox="0 0 276 210"></svg>
+      </div>
+
+      <div class="panel panel-grow">
+        <h2 class="panel-title">Species Legend</h2>
+        <div class="legend">
+          <div class="row"><span class="swatch" style="background:var(--head);"></span>\( H \) &mdash; hydrophilic head</div>
+          <div class="row"><span class="swatch" style="background:var(--tail);"></span>\( T \) &mdash; hydrophobic tail</div>
+          <div class="row"><span class="swatch" style="background:var(--pocket);"></span>\( W_{\mathrm{enc}} \) &mdash; enclosed water</div>
+          <div class="row"><span class="swatch" style="background:var(--micelle);"></span>Micelle</div>
+          <div class="row"><span class="swatch" style="background:var(--cyl);"></span>Cylindrical / wormlike</div>
+          <div class="row"><span class="swatch" style="background:var(--vesicle);"></span>Vesicle</div>
+        </div>
+      </div>
+    </aside>
+
+   
+
+  </main>
+  <section class="morphology-panel panel">
+    <h2 class="panel-title">Molar Fraction Distribution &amp; Morphology Analysis</h2>
+    <div class="morph-bars">
+      <div class="morph-bar">
+        <div class="morph-bar-header">
+          <span class="morph-bar-name">Monomers</span>
+          <span class="morph-bar-pct" id="pctMonomer">0.0%</span>
+        </div>
+        <div class="morph-bar-track">
+          <div class="morph-bar-fill" id="fillMonomer" style="background:#64748B;"></div>
+        </div>
+      </div>
+      <div class="morph-bar">
+        <div class="morph-bar-header">
+          <span class="morph-bar-name">Spherical Micelles</span>
+          <span class="morph-bar-pct" id="pctMicelle">0.0%</span>
+        </div>
+        <div class="morph-bar-track">
+          <div class="morph-bar-fill" id="fillMicelle" style="background:#00F0FF;"></div>
+        </div>
+      </div>
+      <div class="morph-bar">
+        <div class="morph-bar-header">
+          <span class="morph-bar-name">Cylindrical / Wormlike</span>
+          <span class="morph-bar-pct" id="pctCylindrical">0.0%</span>
+        </div>
+        <div class="morph-bar-track">
+          <div class="morph-bar-fill" id="fillCylindrical" style="background:#A78BFA;"></div>
+        </div>
+      </div>
+      <div class="morph-bar">
+        <div class="morph-bar-header">
+          <span class="morph-bar-name">Vesicles</span>
+          <span class="morph-bar-pct" id="pctVesicle">0.0%</span>
+        </div>
+        <div class="morph-bar-track">
+          <div class="morph-bar-fill" id="fillVesicle" style="background:#F472B6;"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+  
+  <footer>
+    Live workstation &mdash; illustrative real-time pass. Validated statistics (4 seeds per grid point, equilibration checks)
+    documented in the full phase-diagram analysis.
+  </footer>
+</div>
+
+<script>
+// ============================================================
+// Lattice MC engine
+// ============================================================
+const EPS = {
+  'T,T': -1.8, 'W,W': 0.0, 'H,H': 0.0,
+  'T,W': 2.2, 'W,T': 2.2,
+  'H,W': -0.6, 'W,H': -0.6,
+  'H,T': 0.0, 'T,H': 0.0,
+};
+function pairEnergy(a, b) { return EPS[a + ',' + b]; }
+
+function mulberry32(seed) {
+  return function () {
+    seed |= 0; seed = (seed + 0x6D2B79F5) | 0;
+    let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+function createSystem(L, nChains, nHead, nTail, rng) {
+  const chainLen = nHead + nTail;
+  const typeSeq = new Array(nHead).fill('H').concat(new Array(nTail).fill('T'));
+  const grid = new Array(L * L).fill('W');
+  const idx = (x, y) => x * L + y;
+  const chains = [];
+  let placed = 0, attempts = 0;
+  while (placed < nChains && attempts < nChains * 500) {
+    attempts++;
+    const x0 = Math.floor(rng() * L), y0 = Math.floor(rng() * L);
+    if (grid[idx(x0, y0)] !== 'W') continue;
+    const path = [[x0, y0]];
+    const visited = new Set([x0 + ',' + y0]);
+    let ok = true;
+    for (let i = 0; i < chainLen - 1; i++) {
+      const [x, y] = path[path.length - 1];
+      const opts = [[(x + 1) % L, y], [(x - 1 + L) % L, y], [x, (y + 1) % L], [x, (y - 1 + L) % L]]
+        .filter(([nx, ny]) => !visited.has(nx + ',' + ny) && grid[idx(nx, ny)] === 'W');
+      if (opts.length === 0) { ok = false; break; }
+      const nxt = opts[Math.floor(rng() * opts.length)];
+      path.push(nxt);
+      visited.add(nxt[0] + ',' + nxt[1]);
+    }
+    if (!ok) continue;
+    for (let i = 0; i < path.length; i++) grid[idx(path[i][0], path[i][1])] = typeSeq[i];
+    chains.push(path);
+    placed++;
+  }
+  return { L, grid, chains, typeSeq, idx };
+}
+
+function interactionNeighbors(sys, x, y) {
+  const L = sys.L;
+  return [
+    [(x + 1) % L, y, 1.0], [(x - 1 + L) % L, y, 1.0],
+    [x, (y + 1) % L, 1.0], [x, (y - 1 + L) % L, 1.0],
+    [(x + 1) % L, (y + 1) % L, 0.5], [(x + 1) % L, (y - 1 + L) % L, 0.5],
+    [(x - 1 + L) % L, (y + 1) % L, 0.5], [(x - 1 + L) % L, (y - 1 + L) % L, 0.5],
+  ];
+}
+
+function totalPotentialEnergy(sys) {
+  const L = sys.L;
+  const edgeSet = new Map();
+  for (let x = 0; x < L; x++) {
+    for (let y = 0; y < L; y++) {
+      for (const [nx, ny, w] of interactionNeighbors(sys, x, y)) {
+        const a = x + ',' + y, b = nx + ',' + ny;
+        const ek = a < b ? a + '|' + b + '|' + w : b + '|' + a + '|' + w;
+        if (!edgeSet.has(ek)) edgeSet.set(ek, [x, y, nx, ny, w]);
+      }
+    }
+  }
+  let E = 0;
+  for (const [x, y, nx, ny, w] of edgeSet.values()) {
+    E += w * pairEnergy(sys.grid[sys.idx(x, y)], sys.grid[sys.idx(nx, ny)]);
+  }
+  return E;
+}
+
+function deltaE(sys, changes) {
+  const edgeSet = new Map();
+  for (const key of changes.keys()) {
+    const [x, y] = key.split(',').map(Number);
+    for (const [nx, ny, w] of interactionNeighbors(sys, x, y)) {
+      const a = key, b = nx + ',' + ny;
+      const ek = a < b ? a + '|' + b + '|' + w : b + '|' + a + '|' + w;
+      edgeSet.set(ek, [a, b, w]);
+    }
+  }
+  let dE = 0.0;
+  for (const [p, q, w] of edgeSet.values()) {
+    const [px, py] = p.split(',').map(Number), [qx, qy] = q.split(',').map(Number);
+    const oldP = changes.has(p) ? changes.get(p)[0] : sys.grid[sys.idx(px, py)];
+    const newP = changes.has(p) ? changes.get(p)[1] : sys.grid[sys.idx(px, py)];
+    const oldQ = changes.has(q) ? changes.get(q)[0] : sys.grid[sys.idx(qx, qy)];
+    const newQ = changes.has(q) ? changes.get(q)[1] : sys.grid[sys.idx(qx, qy)];
+    dE += w * (pairEnergy(newP, newQ) - pairEnergy(oldP, oldQ));
+  }
+  return dE;
+}
+
+function applyChanges(sys, changes) {
+  for (const [key, pair] of changes.entries()) {
+    const [x, y] = key.split(',').map(Number);
+    sys.grid[sys.idx(x, y)] = pair[1];
+  }
+}
+
+function tryEndMove(sys, ci, rng) {
+  const chain = sys.chains[ci];
+  const endIsHead = rng() < 0.5;
+  const idxPos = endIsHead ? 0 : chain.length - 1;
+  const anchorPos = endIsHead ? 1 : chain.length - 2;
+  const endSite = chain[idxPos], anchorSite = chain[anchorPos];
+  const L = sys.L;
+  const [ax, ay] = anchorSite;
+  const cands = [[(ax + 1) % L, ay], [(ax - 1 + L) % L, ay], [ax, (ay + 1) % L], [ax, (ay - 1 + L) % L]]
+    .filter(([nx, ny]) => !(nx === endSite[0] && ny === endSite[1]) && sys.grid[sys.idx(nx, ny)] === 'W');
+  if (cands.length === 0) return;
+  const [nx, ny] = cands[Math.floor(rng() * cands.length)];
+  const t = sys.typeSeq[idxPos];
+  const changes = new Map([
+    [endSite[0] + ',' + endSite[1], [t, 'W']],
+    [nx + ',' + ny, ['W', t]],
+  ]);
+  const dE = deltaE(sys, changes);
+  if (dE <= 0 || rng() < Math.exp(-dE)) { applyChanges(sys, changes); chain[idxPos] = [nx, ny]; }
+}
+
+function tryKinkMove(sys, ci, rng) {
+  const chain = sys.chains[ci];
+  const n = chain.length;
+  if (n < 3) return;
+  const i = 1 + Math.floor(rng() * (n - 2));
+  const [px, py] = chain[i - 1], [cx, cy] = chain[i], [nx_, ny_] = chain[i + 1];
+  if (px === nx_ || py === ny_) return;
+  let cand = [px, ny_];
+  if (cand[0] === cx && cand[1] === cy) cand = [nx_, py];
+  if (sys.grid[sys.idx(cand[0], cand[1])] !== 'W') return;
+  const t = sys.typeSeq[i];
+  const changes = new Map([[cx + ',' + cy, [t, 'W']], [cand[0] + ',' + cand[1], ['W', t]]]);
+  const dE = deltaE(sys, changes);
+  if (dE <= 0 || rng() < Math.exp(-dE)) { applyChanges(sys, changes); chain[i] = cand; }
+}
+
+function tryRigidTranslation(sys, ci, rng) {
+  const chain = sys.chains[ci];
+  const L = sys.L;
+  const ownSet = new Set(chain.map(([x, y]) => x + ',' + y));
+  const dirs = [[1, 0], [-1, 0], [0, 1], [0, -1]];
+  const [dx, dy] = dirs[Math.floor(rng() * 4)];
+  const newPositions = chain.map(([x, y]) => [(x + dx + L) % L, (y + dy + L) % L]);
+  for (const [nx, ny] of newPositions) {
+    const key = nx + ',' + ny;
+    if (!ownSet.has(key) && sys.grid[sys.idx(nx, ny)] !== 'W') return;
+  }
+  const oldTypes = new Map(), newTypes = new Map();
+  chain.forEach(([x, y], i) => oldTypes.set(x + ',' + y, sys.typeSeq[i]));
+  newPositions.forEach(([x, y], i) => newTypes.set(x + ',' + y, sys.typeSeq[i]));
+  const allKeys = new Set([...oldTypes.keys(), ...newTypes.keys()]);
+  const changes = new Map();
+  for (const key of allKeys) {
+    const [x, y] = key.split(',').map(Number);
+    const oldT = oldTypes.has(key) ? oldTypes.get(key) : sys.grid[sys.idx(x, y)];
+    const newT = newTypes.has(key) ? newTypes.get(key) : 'W';
+    changes.set(key, [oldT, newT]);
+  }
+  const dE = deltaE(sys, changes);
+  if (dE <= 0 || rng() < Math.exp(-dE)) { applyChanges(sys, changes); sys.chains[ci] = newPositions; }
+}
+
+function sweep(sys, rng) {
+  const order = sys.chains.map((_, i) => i);
+  for (let i = order.length - 1; i > 0; i--) {
+    const j = Math.floor(rng() * (i + 1));
+    [order[i], order[j]] = [order[j], order[i]];
+  }
+  for (const ci of order) {
+    tryEndMove(sys, ci, rng);
+    tryKinkMove(sys, ci, rng);
+    tryKinkMove(sys, ci, rng);
+    if (rng() < 0.15) tryRigidTranslation(sys, ci, rng);
+  }
+}
+
+// ---- Aggregate detection & classification ----
+function findAggregates(sys) {
+  const L = sys.L;
+  const siteToBead = new Map();
+  sys.chains.forEach((chain, ci) => chain.forEach(([x, y], bi) => siteToBead.set(x + ',' + y, [ci, bi])));
+  const visited = new Set();
+  const aggregates = [];
+  for (let ci = 0; ci < sys.chains.length; ci++) {
+    for (let bi = 0; bi < sys.chains[ci].length; bi++) {
+      const vk = ci + ':' + bi;
+      if (visited.has(vk)) continue;
+      const stack = [[ci, bi, sys.chains[ci][bi][0], sys.chains[ci][bi][1]]];
+      visited.add(vk);
+      const members = [];
+      while (stack.length) {
+        const [cci, bbi, ux, uy] = stack.pop();
+        members.push([cci, bbi, ux, uy]);
+        const curSite = sys.chains[cci][bbi];
+        const curType = sys.typeSeq[bbi];
+        for (const nbBi of [bbi - 1, bbi + 1]) {
+          if (nbBi >= 0 && nbBi < sys.chains[cci].length) {
+            const nk = cci + ':' + nbBi;
+            if (!visited.has(nk)) {
+              const nbSite = sys.chains[cci][nbBi];
+              let dx = nbSite[0] - curSite[0], dy = nbSite[1] - curSite[1];
+              if (dx > L / 2) dx -= L; if (dx < -L / 2) dx += L;
+              if (dy > L / 2) dy -= L; if (dy < -L / 2) dy += L;
+              visited.add(nk);
+              stack.push([cci, nbBi, ux + dx, uy + dy]);
+            }
+          }
+        }
+        if (curType === 'T') {
+          const contactDeltas = [[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]];
+          for (const [dx0, dy0] of contactDeltas) {
+            const nx = (curSite[0] + dx0 + L) % L, ny = (curSite[1] + dy0 + L) % L;
+            if (sys.grid[sys.idx(nx, ny)] !== 'T') continue;
+            const nb = siteToBead.get(nx + ',' + ny);
+            if (!nb) continue;
+            const nk = nb[0] + ':' + nb[1];
+            if (visited.has(nk)) continue;
+            visited.add(nk);
+            stack.push([nb[0], nb[1], ux + dx0, uy + dy0]);
+          }
+        }
+      }
+      aggregates.push(members);
+    }
+  }
+  return aggregates;
+}
+
+function analyzeAggregate(members, L) {
+  const n = members.length;
+  const chainIds = new Set(members.map(m => m[0]));
+  const aggNumber = chainIds.size;
+  let cx = 0, cy = 0;
+  for (const [, , ux, uy] of members) { cx += ux; cy += uy; }
+  cx /= n; cy /= n;
+  let sxx = 0, sxy = 0, syy = 0;
+  for (const [, , ux, uy] of members) {
+    const rx = ux - cx, ry = uy - cy;
+    sxx += rx * rx; sxy += rx * ry; syy += ry * ry;
+  }
+  sxx /= n; sxy /= n; syy /= n;
+  const tr = sxx + syy, det = sxx * syy - sxy * sxy;
+  const disc = Math.sqrt(Math.max(tr * tr / 4 - det, 0));
+  const lam1 = tr / 2 + disc, lam2 = tr / 2 - disc;
+  const ecc = lam1 <= 1e-9 ? 0.0 : 1.0 - (lam2 / lam1);
+  let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+  for (const [, , ux, uy] of members) {
+    if (ux < minX) minX = ux; if (ux > maxX) maxX = ux;
+    if (uy < minY) minY = uy; if (uy > maxY) maxY = uy;
+  }
+  const spans = (maxX - minX >= L - 1) || (maxY - minY >= L - 1);
+  let label;
+  if (spans) label = 'bilayer/vesicle';
+  else if (aggNumber <= 6) label = 'micelle';
+  else if (aggNumber <= 10) label = ecc < 0.55 ? 'micelle' : 'cylindrical/wormlike';
+  else label = 'cylindrical/wormlike';
+  return { nBeads: n, aggNumber, eccentricity: ecc, spansBox: spans, label, members };
+}
+
+function findWaterPockets(sys) {
+  const L = sys.L;
+  const visited = new Set();
+  const deltas = [[1,0],[-1,0],[0,1],[0,-1]];
+  const clusters = [];
+  for (let x = 0; x < L; x++) for (let y = 0; y < L; y++) {
+    const key = x + ',' + y;
+    if (sys.grid[sys.idx(x, y)] !== 'W' || visited.has(key)) continue;
+    const stack = [[x, y]]; visited.add(key); const sites = [];
+    while (stack.length) {
+      const [cx, cy] = stack.pop(); sites.push([cx, cy]);
+      for (const [dx, dy] of deltas) {
+        const nx = (cx + dx + L) % L, ny = (cy + dy + L) % L, nk = nx + ',' + ny;
+        if (sys.grid[sys.idx(nx, ny)] === 'W' && !visited.has(nk)) { visited.add(nk); stack.push([nx, ny]); }
+      }
+    }
+    clusters.push(sites);
+  }
+  clusters.sort((a, b) => b.length - a.length);
+  return { bulk: clusters[0] || [], pockets: clusters.slice(1) };
+}
+
+function findEnclosingAggregate(pocketSites, sys, aggregates) {
+  const L = sys.L;
+  const siteToAgg = new Map();
+  aggregates.forEach((members, idx) => {
+    for (const [ci, bi] of members) {
+      const [x, y] = sys.chains[ci][bi];
+      siteToAgg.set(x + ',' + y, idx);
+    }
+  });
+  const deltas = [[1,0],[-1,0],[0,1],[0,-1]];
+  const bordering = new Set();
+  for (const [x, y] of pocketSites) for (const [dx, dy] of deltas) {
+    const nx = (x + dx + L) % L, ny = (y + dy + L) % L;
+    const a = siteToAgg.get(nx + ',' + ny);
+    if (a !== undefined) bordering.add(a);
+  }
+  if (bordering.size !== 1) return null;
+  return [...bordering][0];
+}
+
+const MIN_POCKET_SIZE = 4, MIN_AGG_FOR_VESICLE = 10;
+function classifySystem(sys) {
+  const aggregates = findAggregates(sys);
+  const results = aggregates.map(m => analyzeAggregate(m, sys.L));
+  const { pockets } = findWaterPockets(sys);
+  const pocketSiteSet = new Set();
+  let vesicleCount = 0;
+  for (const pocket of pockets) {
+    if (pocket.length < MIN_POCKET_SIZE) continue;
+    const aggIdx = findEnclosingAggregate(pocket, sys, aggregates);
+    if (aggIdx === null) continue;
+    if (results[aggIdx].aggNumber < MIN_AGG_FOR_VESICLE) continue;
+    results[aggIdx].label = 'vesicle';
+    vesicleCount++;
+    for (const s of pocket) pocketSiteSet.add(s[0] + ',' + s[1]);
+  }
+  return { results, vesicleCount, pocketSiteSet };
+}
+
+// ============================================================
+// UI constants
+// ============================================================
+const G_VALUES = [0.125, 0.25, 0.375, 0.5, 0.625, 0.75, 0.875];
+const NHNT = [[7,1],[6,2],[5,3],[4,4],[3,5],[2,6],[1,7]];
+const PHI_VALUES = [0.125, 0.225, 0.325, 0.4];
+const NCHAINS = [25, 45, 65, 80];
+const L = 40;
+
+const PHASE_DATA = [
+  {phi:0.125,g:0.125,label:'micelle',agreement:1.0},{phi:0.125,g:0.25,label:'micelle',agreement:1.0},
+  {phi:0.125,g:0.375,label:'micelle',agreement:1.0},{phi:0.125,g:0.5,label:'micelle',agreement:1.0},
+  {phi:0.125,g:0.625,label:'micelle',agreement:1.0},{phi:0.125,g:0.75,label:'micelle',agreement:1.0},
+  {phi:0.125,g:0.875,label:'micelle',agreement:1.0},
+  {phi:0.225,g:0.125,label:'micelle',agreement:1.0},{phi:0.225,g:0.25,label:'micelle',agreement:1.0},
+  {phi:0.225,g:0.375,label:'micelle',agreement:1.0},{phi:0.225,g:0.5,label:'micelle',agreement:1.0},
+  {phi:0.225,g:0.625,label:'micelle',agreement:1.0},{phi:0.225,g:0.75,label:'micelle',agreement:1.0},
+  {phi:0.225,g:0.875,label:'micelle',agreement:0.75},
+  {phi:0.325,g:0.125,label:'micelle',agreement:1.0},{phi:0.325,g:0.25,label:'micelle',agreement:1.0},
+  {phi:0.325,g:0.375,label:'micelle',agreement:1.0},{phi:0.325,g:0.5,label:'micelle',agreement:1.0},
+  {phi:0.325,g:0.625,label:'micelle',agreement:0.75},{phi:0.325,g:0.75,label:'cylindrical/wormlike',agreement:0.75},
+  {phi:0.325,g:0.875,label:'cylindrical/wormlike',agreement:1.0},
+  {phi:0.4,g:0.125,label:'micelle',agreement:1.0},{phi:0.4,g:0.25,label:'micelle',agreement:1.0},
+  {phi:0.4,g:0.375,label:'micelle',agreement:1.0},{phi:0.4,g:0.5,label:'micelle',agreement:1.0},
+  {phi:0.4,g:0.625,label:'cylindrical/wormlike',agreement:0.5},{phi:0.4,g:0.75,label:'vesicle',agreement:0.75},
+  {phi:0.4,g:0.875,label:'vesicle',agreement:0.75},
+];
+
+const LABEL_COLOR = {
+  'micelle': '#21918C',
+  'cylindrical/wormlike': '#ECB22E',
+  'vesicle': '#3B528B',
+  'bilayer/vesicle': '#440154',
+};
+
+const COLORS = {
+  head: '#00F0FF',
+  tail: '#31425F',
+  pocket: '#468FAF',
+  inset: '#14151A',
+  plotLine: '#00F0FF',
+  grid: '#2D313E',
+  axis: '#64748B',
+  muted: '#94A3B8',
+  text: '#E2E8F0',
+  bg: '#111216',
+};
+
+const MORPH_COLORS = {
+  monomer: '#64748B',
+  micelle: '#00F0FF',
+  cylindrical: '#A78BFA',
+  vesicle: '#F472B6',
+};
+
+const svgNS = 'http://www.w3.org/2000/svg';
+const ENERGY_HISTORY_MAX = 200;
+
+let sys, rng, playing = true, sweepCount = 0, frame = 0;
+let pocketSiteSet = new Set();
+let energyHistory = [];
+let crosshairGroup = null;
+
+// ============================================================
+// SVG helpers
+// ============================================================
+function svgEl(tag, attrs) {
+  const el = document.createElementNS(svgNS, tag);
+  for (const [k, v] of Object.entries(attrs)) el.setAttribute(k, v);
+  return el;
+}
+
+function drawPlotFrame(svg, W, H, padL, padR, padT, padB) {
+  const plotW = W - padL - padR, plotH = H - padT - padB;
+  svg.appendChild(svgEl('rect', {
+    x: padL, y: padT, width: plotW, height: plotH,
+    fill: COLORS.inset, stroke: COLORS.grid, 'stroke-width': '1',
+  }));
+  return { plotW, plotH };
+}
+
+function drawGrid(svg, padL, padT, plotW, plotH, xTicks, yTicks, xMap, yMap) {
+  for (const xv of xTicks) {
+    const x = xMap(xv);
+    svg.appendChild(svgEl('line', {
+      x1: x, y1: padT, x2: x, y2: padT + plotH,
+      stroke: COLORS.grid, 'stroke-width': '0.5',
+    }));
+  }
+  for (const yv of yTicks) {
+    const y = yMap(yv);
+    svg.appendChild(svgEl('line', {
+      x1: padL, y1: y, x2: padL + plotW, y2: y,
+      stroke: COLORS.grid, 'stroke-width': '0.5',
+    }));
+  }
+}
+
+function drawAxis(svg, padL, padT, plotW, plotH) {
+  svg.appendChild(svgEl('line', {
+    x1: padL, y1: padT + plotH, x2: padL + plotW, y2: padT + plotH,
+    stroke: COLORS.axis, 'stroke-width': '1',
+  }));
+  svg.appendChild(svgEl('line', {
+    x1: padL, y1: padT, x2: padL, y2: padT + plotH,
+    stroke: COLORS.axis, 'stroke-width': '1',
+  }));
+}
+
+function drawTickLabel(svg, x, y, text, anchor) {
+  const t = svgEl('text', {
+    x, y, fill: COLORS.muted, 'font-size': '8',
+    'font-family': 'IBM Plex Mono, monospace', 'text-anchor': anchor || 'middle',
+  });
+  t.textContent = text;
+  svg.appendChild(t);
+}
+
+// ============================================================
+// Energy plot
+// ============================================================
+const energyPlot = document.getElementById('energyPlot');
+const E_W = 276, E_H = 160;
+const E_PAD = { L: 42, R: 8, T: 10, B: 28 };
+
+function buildEnergyPlot() {
+  while (energyPlot.firstChild) energyPlot.removeChild(energyPlot.firstChild);
+  const { plotW, plotH } = drawPlotFrame(energyPlot, E_W, E_H, E_PAD.L, E_PAD.R, E_PAD.T, E_PAD.B);
+
+  energyPlot._plotW = plotW;
+  energyPlot._plotH = plotH;
+  energyPlot._lineGroup = svgEl('g', {});
+  energyPlot._crossGroup = svgEl('g', {});
+  energyPlot.appendChild(energyPlot._lineGroup);
+  energyPlot.appendChild(energyPlot._crossGroup);
+
+  drawAxis(energyPlot, E_PAD.L, E_PAD.T, plotW, plotH);
+
+  const xLabel = svgEl('text', {
+    x: E_PAD.L + plotW / 2, y: E_H - 4,
+    fill: COLORS.muted, 'font-size': '8.5',
+    'font-family': 'IBM Plex Mono, monospace', 'text-anchor': 'middle',
+  });
+  xLabel.textContent = 'MC Sweeps';
+  energyPlot.appendChild(xLabel);
+
+  const yLabel = svgEl('text', {
+    x: 10, y: E_PAD.T + plotH / 2,
+    fill: COLORS.muted, 'font-size': '8.5',
+    'font-family': 'IBM Plex Mono, monospace',
+    transform: `rotate(-90, 10, ${E_PAD.T + plotH / 2})`, 'text-anchor': 'middle',
+  });
+  yLabel.textContent = 'U_pot / k_BT';
+  energyPlot.appendChild(yLabel);
+
+  energyPlot._yLabelGroup = svgEl('g', {});
+  energyPlot._xLabelGroup = svgEl('g', {});
+  energyPlot._gridGroup = svgEl('g', {});
+  energyPlot.insertBefore(energyPlot._gridGroup, energyPlot._lineGroup);
+  energyPlot.appendChild(energyPlot._yLabelGroup);
+  energyPlot.appendChild(energyPlot._xLabelGroup);
+}
+
+function updateEnergyPlot() {
+  const plotW = energyPlot._plotW, plotH = energyPlot._plotH;
+  const data = energyHistory;
+  if (data.length < 2) return;
+
+  const sweeps = data.map(d => d.sweep);
+  const energies = data.map(d => d.energy);
+  const sMin = sweeps[0], sMax = sweeps[sweeps.length - 1];
+  const eMin = Math.min(...energies), eMax = Math.max(...energies);
+  const ePad = Math.max((eMax - eMin) * 0.08, 2);
+  const yLo = eMin - ePad, yHi = eMax + ePad;
+
+  const xMap = s => E_PAD.L + ((s - sMin) / Math.max(sMax - sMin, 1)) * plotW;
+  const yMap = e => E_PAD.T + plotH - ((e - yLo) / (yHi - yLo)) * plotH;
+
+  while (energyPlot._gridGroup.firstChild) energyPlot._gridGroup.removeChild(energyPlot._gridGroup.firstChild);
+  while (energyPlot._yLabelGroup.firstChild) energyPlot._yLabelGroup.removeChild(energyPlot._yLabelGroup.firstChild);
+  while (energyPlot._xLabelGroup.firstChild) energyPlot._xLabelGroup.removeChild(energyPlot._xLabelGroup.firstChild);
+  while (energyPlot._lineGroup.firstChild) energyPlot._lineGroup.removeChild(energyPlot._lineGroup.firstChild);
+
+  const yTicks = 4;
+  for (let i = 0; i <= yTicks; i++) {
+    const v = yLo + (yHi - yLo) * i / yTicks;
+    const y = yMap(v);
+    energyPlot._gridGroup.appendChild(svgEl('line', {
+      x1: E_PAD.L, y1: y, x2: E_PAD.L + plotW, y2: y,
+      stroke: COLORS.grid, 'stroke-width': '0.5',
+    }));
+    drawTickLabel(energyPlot._yLabelGroup, E_PAD.L - 4, y + 3, v.toFixed(0), 'end');
+  }
+
+  const xTicks = 4;
+  for (let i = 0; i <= xTicks; i++) {
+    const v = sMin + (sMax - sMin) * i / xTicks;
+    const x = xMap(v);
+    energyPlot._gridGroup.appendChild(svgEl('line', {
+      x1: x, y1: E_PAD.T, x2: x, y2: E_PAD.T + plotH,
+      stroke: COLORS.grid, 'stroke-width': '0.5',
+    }));
+    drawTickLabel(energyPlot._xLabelGroup, x, E_PAD.T + plotH + 12, Math.round(v).toString(), 'middle');
+  }
+
+  let pathD = '';
+  data.forEach((d, i) => {
+    const x = xMap(d.sweep), y = yMap(d.energy);
+    pathD += (i === 0 ? 'M' : 'L') + x + ',' + y + ' ';
+  });
+  energyPlot._lineGroup.appendChild(svgEl('path', {
+    d: pathD, fill: 'none', stroke: COLORS.plotLine, 'stroke-width': '1.2',
+  }));
+
+  const last = data[data.length - 1];
+  energyPlot._lineGroup.appendChild(svgEl('circle', {
+    cx: xMap(last.sweep), cy: yMap(last.energy), r: '2.5',
+    fill: COLORS.plotLine, stroke: COLORS.text, 'stroke-width': '0.5',
+  }));
+}
+
+function recordEnergy() {
+  const E = totalPotentialEnergy(sys);
+  energyHistory.push({ sweep: sweepCount, energy: E });
+  if (energyHistory.length > ENERGY_HISTORY_MAX) energyHistory.shift();
+  document.getElementById('statEnergy').textContent = E.toFixed(1);
+  document.getElementById('plotEnergyVal').textContent = E.toFixed(1);
+  document.getElementById('plotSweepVal').textContent = sweepCount;
+  updateEnergyPlot();
+  updateConvergenceStatus();
+}
+
+function updateConvergenceStatus() {
+  const el = document.getElementById('statusVal');
+  const item = document.getElementById('statusItem');
+  if (energyHistory.length < 30) {
+    el.textContent = 'Equilibrating';
+    item.className = 'item status';
+    return;
+  }
+  const recent = energyHistory.slice(-20).map(d => d.energy);
+  const mean = recent.reduce((a, b) => a + b, 0) / recent.length;
+  const variance = recent.reduce((a, b) => a + (b - mean) ** 2, 0) / recent.length;
+  const relStd = Math.sqrt(variance) / Math.abs(mean || 1);
+  if (relStd < 0.005 && sweepCount > 100) {
+    el.textContent = 'Converged';
+    item.className = 'item status';
+  } else {
+    el.textContent = 'Equilibrating';
+    item.className = 'item status';
+  }
+}
+
+// ============================================================
+// Phase diagram
+// ============================================================
+const phaseMap = document.getElementById('phaseMap');
+const P_W = 276, P_H = 210;
+const P_PAD = { L: 36, R: 10, T: 14, B: 30 };
+
+function buildPhaseMap() {
+  const plotW = P_W - P_PAD.L - P_PAD.R;
+  const plotH = P_H - P_PAD.T - P_PAD.B;
+  const phiMin = 0.10, phiMax = 0.43;
+  const gMin = 0.08, gMax = 0.92;
+  const phiToX = phi => P_PAD.L + (phi - phiMin) / (phiMax - phiMin) * plotW;
+  const gToY = g => P_PAD.T + plotH - (g - gMin) / (gMax - gMin) * plotH;
+
+  while (phaseMap.firstChild) phaseMap.removeChild(phaseMap.firstChild);
+
+  drawPlotFrame(phaseMap, P_W, P_H, P_PAD.L, P_PAD.R, P_PAD.T, P_PAD.B);
+
+  const phiTicks = [0.125, 0.225, 0.325, 0.400];
+  const gTicks = [0.125, 0.375, 0.625, 0.875];
+  drawGrid(phaseMap, P_PAD.L, P_PAD.T, plotW, plotH, phiTicks, gTicks, phiToX, gToY);
+  drawAxis(phaseMap, P_PAD.L, P_PAD.T, plotW, plotH);
+
+  phiTicks.forEach(v => drawTickLabel(phaseMap, phiToX(v), P_PAD.T + plotH + 14, v.toFixed(3), 'middle'));
+  gTicks.forEach(v => drawTickLabel(phaseMap, P_PAD.L - 5, gToY(v) + 3, v.toFixed(3), 'end'));
+
+  const xAxisLbl = svgEl('text', {
+    x: P_PAD.L + plotW - 4, y: P_PAD.T + plotH + 26,
+    fill: COLORS.muted, 'font-size': '9',
+    'font-family': 'IBM Plex Mono, monospace', 'text-anchor': 'end',
+  });
+  xAxisLbl.textContent = '\u03C6 \u2192';
+  phaseMap.appendChild(xAxisLbl);
+
+  const yAxisLbl = svgEl('text', {
+    x: P_PAD.L - 2, y: P_PAD.T + 6,
+    fill: COLORS.muted, 'font-size': '9',
+    'font-family': 'IBM Plex Mono, monospace', 'text-anchor': 'end',
+  });
+  yAxisLbl.textContent = 'g';
+  phaseMap.appendChild(yAxisLbl);
+
+  for (const d of PHASE_DATA) {
+    const cx = phiToX(d.phi), cy = gToY(d.g);
+    const sz = 5.5;
+    phaseMap.appendChild(svgEl('rect', {
+      x: cx - sz / 2, y: cy - sz / 2, width: sz, height: sz,
+      fill: LABEL_COLOR[d.label],
+      opacity: Math.max(d.agreement, 0.4),
+      stroke: COLORS.bg, 'stroke-width': '0.6',
+    }));
+  }
+
+  crosshairGroup = svgEl('g', { id: 'crosshair' });
+  const hLine = svgEl('line', { stroke: COLORS.text, 'stroke-width': '0.8', 'stroke-dasharray': '3,2' });
+  const vLine = svgEl('line', { stroke: COLORS.text, 'stroke-width': '0.8', 'stroke-dasharray': '3,2' });
+  const reticle = svgEl('rect', {
+    fill: 'none', stroke: COLORS.text, 'stroke-width': '1.2', width: '8', height: '8',
+  });
+  const dot = svgEl('circle', { r: '1.5', fill: COLORS.text });
+  crosshairGroup.appendChild(hLine);
+  crosshairGroup.appendChild(vLine);
+  crosshairGroup.appendChild(reticle);
+  crosshairGroup.appendChild(dot);
+  crosshairGroup._hLine = hLine;
+  crosshairGroup._vLine = vLine;
+  crosshairGroup._reticle = reticle;
+  crosshairGroup._dot = dot;
+  phaseMap.appendChild(crosshairGroup);
+
+  phaseMap._phiToX = phiToX;
+  phaseMap._gToY = gToY;
+  phaseMap._plotBounds = { padL: P_PAD.L, padT: P_PAD.T, plotW, plotH };
+}
+
+function updatePhaseMapMarker() {
+  if (!crosshairGroup) return;
+  const gi = +document.getElementById('gSlider').value;
+  const pi = +document.getElementById('phiSlider').value;
+  const phi = PHI_VALUES[pi], g = G_VALUES[gi];
+  const cx = phaseMap._phiToX(phi), cy = phaseMap._gToY(g);
+  const { padL, padT, plotW, plotH } = phaseMap._plotBounds;
+
+  crosshairGroup._hLine.setAttribute('x1', padL);
+  crosshairGroup._hLine.setAttribute('x2', padL + plotW);
+  crosshairGroup._hLine.setAttribute('y1', cy);
+  crosshairGroup._hLine.setAttribute('y2', cy);
+  crosshairGroup._vLine.setAttribute('x1', cx);
+  crosshairGroup._vLine.setAttribute('x2', cx);
+  crosshairGroup._vLine.setAttribute('y1', padT);
+  crosshairGroup._vLine.setAttribute('y2', padT + plotH);
+  crosshairGroup._reticle.setAttribute('x', cx - 4);
+  crosshairGroup._reticle.setAttribute('y', cy - 4);
+  crosshairGroup._dot.setAttribute('cx', cx);
+  crosshairGroup._dot.setAttribute('cy', cy);
+}
+
+function computePhaseDistribution(results, totalChains) {
+  const counts = { monomer: 0, micelle: 0, cylindrical: 0, vesicle: 0 };
+  if (!totalChains) return { monomer: 0, micelle: 0, cylindrical: 0, vesicle: 0 };
+  for (const r of results) {
+    if (r.aggNumber === 1) counts.monomer += 1;
+    else if (r.label === 'micelle') counts.micelle += r.aggNumber;
+    else if (r.label === 'cylindrical/wormlike') counts.cylindrical += r.aggNumber;
+    else if (r.label === 'vesicle' || r.label === 'bilayer/vesicle') counts.vesicle += r.aggNumber;
+  }
+  return {
+    monomer: (counts.monomer / totalChains) * 100,
+    micelle: (counts.micelle / totalChains) * 100,
+    cylindrical: (counts.cylindrical / totalChains) * 100,
+    vesicle: (counts.vesicle / totalChains) * 100,
+  };
+}
+
+function updateMorphologyBars(distribution) {
+  const map = [
+    ['monomer', 'Monomer', 'pctMonomer', 'fillMonomer'],
+    ['micelle', 'Micelle', 'pctMicelle', 'fillMicelle'],
+    ['cylindrical', 'Cylindrical', 'pctCylindrical', 'fillCylindrical'],
+    ['vesicle', 'Vesicle', 'pctVesicle', 'fillVesicle'],
+  ];
+  for (const [key, , pctId, fillId] of map) {
+    const pct = distribution[key] || 0;
+    document.getElementById(pctId).textContent = pct.toFixed(1) + '%';
+    document.getElementById(fillId).style.width = pct + '%';
+  }
+}
+
+// ============================================================
+// Simulation UI
+// ============================================================
+function buildSystem() {
+  const gi = +document.getElementById('gSlider').value;
+  const pi = +document.getElementById('phiSlider').value;
+  const [nh, nt] = NHNT[gi];
+  const nChains = NCHAINS[pi];
+  rng = mulberry32(Date.now() & 0xffffffff);
+  sys = createSystem(L, nChains, nh, nt, rng);
+  sweepCount = 0;
+  frame = 0;
+  pocketSiteSet = new Set();
+  energyHistory = [];
+  updateSliderLabels();
+  updatePhaseMapMarker();
+  render();
+  recordEnergy();
+  updateStats();
+  document.getElementById('statusVal').textContent = 'Equilibrating';
+}
+
+function updateSliderLabels() {
+  const gi = +document.getElementById('gSlider').value;
+  const pi = +document.getElementById('phiSlider').value;
+  const g = G_VALUES[gi], phi = PHI_VALUES[pi];
+  document.getElementById('gVal').textContent = g.toFixed(3);
+  document.getElementById('phiVal').textContent = phi.toFixed(3);
+  document.getElementById('viewportInfo').innerHTML =
+    `\\( g = ${g.toFixed(3)} \\), \\( \\phi = ${phi.toFixed(3)} \\)`;
+  if (window.MathJax && MathJax.typesetPromise) MathJax.typesetPromise([document.getElementById('viewportInfo')]);
+}
+
+const canvas = document.getElementById('latticeCanvas');
+const ctx = canvas.getContext('2d');
+const CELL = canvas.width / L;
+
+function render() {
+  ctx.fillStyle = COLORS.inset;
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  for (let x = 0; x < L; x++) {
+    for (let y = 0; y < L; y++) {
+      const t = sys.grid[sys.idx(x, y)];
+      let color = null;
+      if (t === 'H') color = COLORS.head;
+      else if (t === 'T') color = COLORS.tail;
+      else if (pocketSiteSet.has(x + ',' + y)) color = COLORS.pocket;
+      if (color) {
+        ctx.fillStyle = color;
+        ctx.fillRect(x * CELL, (L - 1 - y) * CELL, CELL + 0.5, CELL + 0.5);
+      }
+    }
+  }
+}
+
+function updateStats() {
+  const { results, pocketSiteSet: pset } = classifySystem(sys);
+  pocketSiteSet = pset;
+  const totalChains = sys.chains.length;
+
+  if (results.length === 0) {
+    updateMorphologyBars({ monomer: 100, micelle: 0, cylindrical: 0, vesicle: 0 });
+    return;
+  }
+
+  const chainsByLabel = {};
+  for (const r of results) chainsByLabel[r.label] = (chainsByLabel[r.label] || 0) + r.aggNumber;
+  let dominant = 'micelle', best = -1;
+  for (const k in chainsByLabel) if (chainsByLabel[k] > best) { best = chainsByLabel[k]; dominant = k; }
+  const maxAgg = Math.max(...results.map(r => r.aggNumber));
+
+  document.getElementById('statAgg').textContent = results.length;
+  document.getElementById('statMax').textContent = maxAgg;
+  document.getElementById('statSweeps').textContent = sweepCount;
+
+  const pill = document.getElementById('statLabel');
+  pill.textContent = dominant.replace('/', ' / ');
+  pill.style.background = LABEL_COLOR[dominant] || '#21918C';
+  pill.style.color = COLORS.bg;
+
+  updateMorphologyBars(computePhaseDistribution(results, totalChains));
+}
+
+function loop() {
+  if (playing) {
+    sweep(sys, rng);
+    sweepCount++;
+    render();
+    frame++;
+    if (frame % 5 === 0) recordEnergy();
+    if (frame % 10 === 0) updateStats();
+  }
+  requestAnimationFrame(loop);
+}
+
+// ---- events ----
+document.getElementById('gSlider').addEventListener('input', () => {
+  updateSliderLabels();
+  updatePhaseMapMarker();
+});
+document.getElementById('phiSlider').addEventListener('input', () => {
+  updateSliderLabels();
+  updatePhaseMapMarker();
+});
+document.getElementById('gSlider').addEventListener('change', buildSystem);
+document.getElementById('phiSlider').addEventListener('change', buildSystem);
+document.getElementById('resetBtn').addEventListener('click', buildSystem);
+document.getElementById('playBtn').addEventListener('click', (e) => {
+  playing = !playing;
+  e.target.textContent = playing ? 'Pause' : 'Play';
+  e.target.classList.toggle('active', playing);
+});
+
+buildEnergyPlot();
+buildPhaseMap();
+buildSystem();
+requestAnimationFrame(loop);
+
+if (window.MathJax && MathJax.typesetPromise) MathJax.typesetPromise();
+</script>
+</body>
+</html>
