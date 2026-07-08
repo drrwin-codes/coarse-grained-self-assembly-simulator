@@ -2,12 +2,28 @@
 
 **r_q: can a lightweight, from-scratch simulation reproduce the known phase map of these structures, using nothing but molecular geometry as an input?**
 
-The spontaneous organization of **`amphiphilic molecules`** into well-defined macroscopic topologies, such as **`spherical micelles`, `wormlike cylinders`**, and **`closed bilayer vesicles`**, outlines essential biological motifs and industrial formulations. 
+`Amphiphilic molecules` don't need to be told how to organize. Left in solution, they spontaneously sort themselves into spherical `micelles`, wormlike `cylinders`, or closed `bilayer vesicles`, structures that underpin everything from cell membranes to laundry detergent.
 
-> While high-fidelity molecular dynamics simulations offer exceptional atomistic detail, their extensive computational demands mask the primary physical invariants governing these phase transitions. Here, we present an ultra-lightweight, `2D lattice Monte Carlo simulator` designed to establish whether complex, multi-state phase landscapes can be accurately recovered solely from local molecular geometry and concentration.
+`Molecular dynamics simulations` can capture this `self-assembly` in exquisite atomistic detail, but that detail comes at a cost: 
 
-By representing amphiphiles as minimal bead-chains with simple solvophobic energy rules, our model successfully captures the emergence of diverse self-assembled aggregates without imposing explicit morphological templates. We demonstrate that this minimal engine quantitatively matches the analytical boundaries predicted by `Israelachvili’s classical packing parameter framework`.
+> **the computational overhead often buries the simple physical rules actually driving the transitions between these phases.**
 
-> To facilitate broader scientific exploration and educational engagement, we integrate this discrete physical engine into an optimized, browser-based real-time visualization platform. Our findings prove that local steric constraints and interfacial energy minimization are completely sufficient to dictate global amphiphilic phase topographies, isolating the essential noise from the structural signal in self-assembly phenomena
+**I wanted to strip the problem down and ask a more basic question:**
 
+> **how much of this behavior can be recovered from geometry and concentration alone, with none of the chemical bookkeeping?**
+
+To find out, I built a `minimal 2D lattice Monte Carlo simulator`. Amphiphiles are represented as short `bead-chains` governed by simple `solvophobic energy rules`, nothing more. No morphology is hardcoded into the model. And yet the full range of aggregate shapes emerges on its own, matching the phase boundaries predicted by `Israelachvili's classical packing parameter framework` with surprising fidelity. I also built a lightweight, browser-based visualization layer on top of the engine, partly for my own exploration, partly so others can watch these phases form in real time without needing a simulation background.
+
+---
+
+> <img width="2880" height="1627" alt="image" src="https://github.com/user-attachments/assets/43b811d7-8272-4b3c-885b-06ecc5768e8a" />
+
+---
+
+ `The upshot`: **local packing constraints and interfacial energy minimization, on their own, are enough to determine the global phase landscape of amphiphile self-assembly. 
+
+---
+> Phase behavior isn't an emergent property that requires the full weight of atomistic simulation to predict; a packing parameter and a concentration are, in this minimal picture, doing most of the explanatory work; the chemical identity of the tail, the exact solvent composition, the fine details MD captures so well, seems to matter less for determining which phase you land in, and more for the finer details of *how* you get there.
+ ---
+There's something clarifying about watching a system this stripped-down still find its way to spheres, cylinders, and bilayers. Hope you find it cool too :)
 
